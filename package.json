@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+	"fb-emul-empty": "firebase emulators:start --only firestore",
+	"fb-emul": "firebase emulators:start --only firestore,auth,storage,functions --import=./hb_emulator_data/hb_emulator_export"
   },
   "dependencies": {
     "pinia": "^3.0.3",
