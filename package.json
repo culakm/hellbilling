@@ -11,7 +11,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "fb-emul-empty": "firebase emulators:start --only firestore,auth,storage,functions",
-    "fb-emul": "firebase emulators:start --only firestore,auth,storage,functions --import=./hb_emulator_data/hb_emulator_export"
+    "fb-emul": "firebase emulators:start --only firestore,auth,storage,functions --import=./hb_emulator_data/hb_current"
   },
   "dependencies": {
     "firebase": "^12.6.0",
@@ -22,7 +22,7 @@
     "vue": "^3.5.22",
     "vue-fullscreen": "^3.1.2",
     "vue-router": "^4.6.3",
-    "vuedraggable": "^2.24.3"
+    "vuedraggable": "^4.0.2"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
