@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "fb-emul-empty": "firebase emulators:start --only firestore,auth,storage,functions",
     "fb-emul": "firebase emulators:start --only firestore,auth,storage,functions --import=./hb_emulator_data/hb_current",
+	"fb-emul-exit": "firebase emulators:start --only firestore,auth,storage,functions --import=./hb_emulator_data/hb_current --export-on-exit=./hb_emulator_data/hb_current",
     "fb-web-down": "firebase hosting:disable",
 	"fb-web-up": "firebase deploy"
   },
