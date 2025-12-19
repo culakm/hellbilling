@@ -1,18 +1,33 @@
-import { fileURLToPath, URL } from 'node:url'
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { quasar, transformAssetUrls } from '@quasar/vite-plugin';
+import { fileURLToPath, URL } from 'node:url';
 
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
-
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    vueDevTools(),
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    },
-  },
-})
+	plugins: [
+		vue({
+			template: { transformAssetUrls }
+		}),
+		quasar({
+			// sassVariables: fileURLToPath(new URL('./src/quasar-variables.sass', import.meta.url))
+			sassVariables: '@/quasar-variables.sass',
+		})
+	],
+	css: {
+		preprocessorOptions: {
+			scss: {
+				api: 'modern-compiler'  // or "modern"
+			},
+			sass: {
+				// silenceDeprecations: ["legacy-js-api"], // this works
+				api: 'modern-compiler' // this doesn't work
+			}
+		}
+	},
+	resolve: {
+		alias: {
+			'@': fileURLToPath(new URL('./src', import.meta.url))
+		}
+	}
+});
