@@ -1,171 +1,117 @@
 <template>
-    <main>
-        <base-dialog @close="clearError" :show="!!error" title="An error is ocurred!">
-            <p>{{ error }}</p>
-        </base-dialog>
-        <section>
-            <base-card>
-                <div v-if="isLoading">
-                    <base-spinner></base-spinner>
-                </div>
-                <div v-else-if="tripsStore.activeTrip">
-                    <h2>{{ tripsStore.activeTrip.name }}</h2>
-                    <p>linesCount: {{ tripsStore.activeTrip.linesCount }}</p>
-                    <trip-form @save-data="updateTripLocal" :trip="tripsStore.activeTrip"></trip-form>
-                </div>
-            </base-card>
-        </section>
-        <section>
-            <base-card v-if="tripsStore.activeTripHasLines">
-                <ul>
-                    <draggable
-                        :list="tripsStore.activeTripLines"
-                        :disabled="!draggableEnabled"
-                        item-key="order"
-                        class="list-group"
-                        ghost-class="ghost"
-                        @start="dragging = true"
-                        @end="onEnd"
-                    >
-                        <template #item="{ element }">
-                            <div class="list-group-item" :class="{ 'not-draggable': !draggableEnabled }">
-                                <line-actions
-                                    :key="element.lineId"
-                                    :line="element"
-                                    :trip-id="tripsStore.activeTrip.tripId"
-                                    @line-is-edited="lineIsEdited"
-                                ></line-actions>
-                            </div>
-                        </template>
-                    </draggable>
-                </ul>
-            </base-card>
-        </section>
-        <section>
-            <base-card>
-                <line-form @save-line="createLineLocal"></line-form>
-            </base-card>
-        </section>
-    </main>
+	<q-page class="q-pa-md bg-grey-2">
+		<q-card>
+			<q-card-section class="row items-center justify-between">
+				<trip-form v-if="tripsStore.activeTrip" @save-data="updateTripLocal" :trip="tripsStore.activeTrip" />
+			</q-card-section>
+			<q-separator />
+			<q-card-section>
+				<VueDraggable v-if="activeTripReactive?.lines?.length" ref="el" v-model="activeTripReactive.lines" item-key="lineId" :disabled="!draggableEnabled" :animation="150" ghostClass="ghost" @start="onStart" @end="onEnd">
+					<line-actions v-for="line in activeTripReactive.lines" :key="line.lineId" :line="line" :trip-id="activeTripReactive.tripId" @line-is-edited="lineIsEdited"></line-actions>
+				</VueDraggable>
+			</q-card-section>
+			<q-separator />
+			<q-card-section>
+				<line-form v-if="tripsStore.activeTrip" @save-line="createLineLocal"></line-form>
+			</q-card-section>
+		</q-card>
+	</q-page>
 </template>
 
-<script>
-import { ref, onMounted } from 'vue';
-import { useAuthStore } from '@/stores/auth';
-import { useTripsStore } from '@/stores/trips';
-import { useLinesStore } from '@/stores/lines';
-import { useRoute } from 'vue-router';
-import { useError } from '@/composables/useError';
-import draggable from "vuedraggable";
-import TripForm from '../../components/trips/TripForm.vue';
-import LineForm from '../../components/lines/LineForm.vue';
-import LineActions from '../../components/lines/LineActions.vue';
+<script setup>
+import { ref, onMounted } from "vue";
+import { storeToRefs } from "pinia";
+import { useRoute } from "vue-router";
+import { useRouter } from "vue-router";
+import { useQuasar } from "quasar";
 
-export default {
-    name: 'TripEdit',
-    components: {
-        draggable,
-        TripForm,
-        LineForm,
-        LineActions,
-    },
-    setup() {
-        const componentName = 'TripEdit';
-        const authStore = useAuthStore();
-		const tripsStore = useTripsStore();
-		const linesStore = useLinesStore();
-        const route = useRoute();
-        const { error, setError, clearError } = useError(componentName);
+import { useAuthStore } from "@/stores/auth";
+import { useTripsStore } from "@/stores/trips";
+import { useLinesStore } from "@/stores/lines";
+import { VueDraggable } from "vue-draggable-plus";
+import TripForm from "@/components/trips/TripForm.vue";
+import LineForm from "@/components/lines/LineForm.vue";
+import LineActions from "@/components/lines/LineActions.vue";
 
-        const isLoading = ref(false);
-        const draggableEnabled = ref(true);
-        const dragging = ref(false);
+const authStore = useAuthStore();
+const tripsStore = useTripsStore();
+const { activeTrip: activeTripReactive } = storeToRefs(tripsStore);
+const linesStore = useLinesStore();
+const route = useRoute();
+const router = useRouter();
+const $q = useQuasar();
 
-        onMounted(() => {
-			tripByIdLocal(route.params.tripId);
-        });
+const draggableEnabled = ref(true);
+const dragging = ref(false);
 
-        async function tripByIdLocal(tripId) {
-            isLoading.value = true;
-            try {
-				await tripsStore.setActiveTrip(tripId);
-            } catch (err) {
-                setError(err.message || err);
-            }
-            isLoading.value = false;
-        }
+onMounted(() => {
+	tripByIdLocal(route.params.tripId);
+});
 
-        async function updateTripLocal(tripData) {
-            isLoading.value = true;
-			tripData.userId = authStore.userId;
-            try {
-				await tripsStore.updateTrip(tripData);
-            } catch (err) {
-                setError(err.message || err);
-            }
-            isLoading.value = false;
-        }
+const tripByIdLocal = async (tripId) => {
+	$q.loading.show();
+	try {
+		await tripsStore.setActiveTrip(tripId);
+		$q.loading.hide();
+	} catch (err) {
+		$q.dialog({ title: "Error", message: err.message || err });
+		$q.loading.hide();
+	}
+};
 
-        async function createLineLocal(lineData) {
-            isLoading.value = true;
-            const lastOrder = tripsStore.activeTripLines.length;
-            lineData.order = lastOrder + 1;
-            lineData.tripId = tripsStore.activeTrip.tripId;
-            try {
-				await linesStore.createLine(lineData);
-            } catch (err) {
-                setError(err.message || err);
-            }
-            isLoading.value = false;
-        }
+const updateTripLocal = async (tripData) => {
+	tripData.userId = authStore.userId;
+	$q.loading.show();
+	try {
+		await tripsStore.updateTrip(tripData);
+		$q.loading.hide();
+	} catch (err) {
+		$q.dialog({ title: "Error", message: err.message || err });
+		$q.loading.hide();
+	}
+	router.replace("/trips");
+};
 
-        function lineIsEdited() {
-            draggableEnabled.value = !draggableEnabled.value;
-        }
+const createLineLocal = async (lineData) => {
+	$q.loading.show();
+	const lastOrder = tripsStore.activeTrip.lines.length;
+	lineData.order = lastOrder + 1;
+	lineData.tripId = tripsStore.activeTrip.tripId;
+	try {
+		await linesStore.createLine(lineData);
+		$q.loading.hide();
+	} catch (err) {
+		$q.dialog({ title: "Error", message: err.message || err });
+		$q.loading.hide();
+	}
+};
 
-        async function onEnd(evt) {
-            dragging.value = false;
-            tripsStore.activeTripLines.forEach((line, index) => {
-                line.order = index + 1;
-            });
-			await linesStore.updateLines(tripsStore.activeTripLines, tripsStore.activeTrip.tripId);
-        }
+const lineIsEdited = () => {
+	draggableEnabled.value = !draggableEnabled.value;
+};
 
-        return {
-            componentName,
-            error,
-            clearError,
-            isLoading,
-			tripsStore,
-            draggableEnabled,
-            dragging,
-            tripByIdLocal,
-            updateTripLocal,
-            createLineLocal,
-            lineIsEdited,
-            onEnd
-        };
-    }
+const onStart = (e) => {
+	dragging.value = true;
+};
+
+const onEnd = async (e) => {
+	dragging.value = false;
+	tripsStore.activeTrip.lines.forEach((line, index) => {
+		line.order = index + 1;
+	});
+	try {
+		await linesStore.updateLines(tripsStore.activeTrip.lines, tripsStore.activeTrip.tripId);
+		$q.loading.hide();
+	} catch (err) {
+		$q.dialog({ title: "Error", message: err.message || err });
+		$q.loading.hide();
+	}
 };
 </script>
 
 <style scoped>
-    .buttons {
-        margin-top: 35px;
-    }
-
-    .ghost {
-        opacity: 0.5;
-        background: #c8ebfb;
-    }
-
-    .not-draggable {
-        cursor: no-drop;
-    }
-
-    ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
+.ghost {
+	opacity: 0.5;
+	background: #c8ebfb;
+}
 </style>

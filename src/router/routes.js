@@ -1,9 +1,13 @@
 // nedynamicky importovany component
 import UserAuth from '@/pages/auth/UserAuth.vue';
 
-const routes = [
-	{ path: '/', component: () => import('@/pages/IndexPage.vue') },
-	{ path: '/test', component: () => import('@/pages/test/TestPage.vue'), meta: { requiresAuth: true } },
+const routes = [{
+	path: '/',
+    component: () => import('@/layouts/MainLayout.vue'),
+    children: [
+	{ path: '', component: () => import('@/pages/Index.vue') },
+	// { path: '/test', component: () => import('@/pages/test/TestPage.vue'), meta: { requiresAuth: true } },
+	{ path: '/test', component: () => import('@/pages/test/TestPage.vue')},
 
 	{ name: 'trips', path: '/trips', component: () => import('@/pages/trips/TripList.vue'), meta: { requiresAuth: true } },
 	{ name: 'trip-add', path: '/trip/add', component: () => import('@/pages/trips/TripCreate.vue'), meta: { requiresAuth: true } },
@@ -17,9 +21,13 @@ const routes = [
 	{ name: 'user-add', path: '/user/add', component: () => import('@/pages/users/UserCreate.vue'), meta: { requiresAuth: true } },
 	{ name: 'user-edit', path: '/user/edit/:userId', component: () => import('@/pages/users/UserEdit.vue'), props: false, meta: { requiresAuth: true } },
 
-	{ name: 'auth', path: '/auth', component: UserAuth, meta: { requiresUnauth: true } },
+	// { name: 'auth', path: '/auth', component: UserAuth, meta: { requiresUnauth: true } },
+	{ name: 'auth', path: '/auth', component: () => import('@/pages/auth/UserAuth.vue'), meta: { requiresUnauth: true } },
 
 	{ path: '/:notFound(.*)', component: () => import('@/pages/NotFound.vue') },
+
+	]
+}
 ];
 
 export default routes

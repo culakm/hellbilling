@@ -1,13 +1,13 @@
-import { ref, computed } from 'vue';
-import { defineStore } from 'pinia';
-import { db } from '../firebase.js';
+import { ref, computed } from "vue";
+import { defineStore } from "pinia";
+import { db } from "../firebase.js";
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
-import { cloudFunctions } from '../firebase.js';
-import { httpsCallable } from 'firebase/functions';
+import { cloudFunctions } from "../firebase.js";
+import { httpsCallable } from "firebase/functions";
 
 const _getUserRole = async (email) => {
 	try {
-		const getUserRole = httpsCallable(cloudFunctions, 'getUserRole');
+		const getUserRole = httpsCallable(cloudFunctions, "getUserRole");
 		const roleResult = await getUserRole({ email });
 		return roleResult.data.role;
 	} catch (error) {
@@ -17,23 +17,24 @@ const _getUserRole = async (email) => {
 	}
 };
 
-export const useUsersStore = defineStore('users', () => {
+export const useUsersStore = defineStore("users", () => {
 
-    // State
-    const users = ref([]);
-    const activeUser = ref(null);
+	// State
+	const users = ref([]);
+	const activeUser = ref(null);
 
-    // Reset state
-    function $reset() {
-        users.value = [];
-        activeUser.value = null;
-    }
+	// Reset state
+	const $reset = () => {
+		users.value = [];
+		activeUser.value = null;
+	};
 
-    // Getters
-    const hasUsers = computed(() => users.value.length > 0);
-    const UsersCount = computed(() => users.value.length);
+	// Getters
+	const hasUsers = computed(() => users.value.length > 0);
+	const usersCount = computed(() => users.value.length);
 
-	async function loadUsers() {
+	// Actions
+	const loadUsers = async () => {
 		try {
 			users.value = [];
 			const usersCollectionRef = collection(db, "users");
@@ -47,7 +48,7 @@ export const useUsersStore = defineStore('users', () => {
 					return {
 						...userData,
 						userId: doc.id,
-						role
+						role,
 					};
 				} catch (error) {
 					console.error(`Error fetching role for user ${userData.email}: ${error.message}`);
@@ -59,51 +60,56 @@ export const useUsersStore = defineStore('users', () => {
 			console.error(`Error loading users: ${error.message}`);
 			throw new Error(`Error loading users: ${error.message}`);
 		}
-	}
+	};
 
-	async function createUser(userData) {
+	const createUser = async (userData) => {
 		try {
-			const createUserFn = httpsCallable(cloudFunctions, 'createUser');
-            const cloudFunctionData = await createUserFn({ user: userData });
+			const createUserFn = httpsCallable(cloudFunctions, "createUser");
+			const cloudFunctionData = await createUserFn({ user: userData });
 			userData.userId = cloudFunctionData.data.userId;
 			users.value.push(userData);
+			users.value.sort((a, b) => a.name.localeCompare(b.name));
 		} catch (error) {
-			const errorOut = `Error loading users: ${error.message}`;
+			const errorOut = `Error creating users: ${error.message}`;
 			console.error(errorOut);
 			throw new Error(errorOut);
 		}
-	}
-	async function updateUser(userData) {
+	};
+
+	const updateUser = async (userData) => {
 		try {
-			const updateUserFn = httpsCallable(cloudFunctions, 'updateUser');
+			const updateUserFn = httpsCallable(cloudFunctions, "updateUser");
 			await updateUserFn({ user: userData });
-			const index = users.value.findIndex(user => user.userId === userData.userId);
+			const index = users.value.findIndex((user) => user.userId === userData.userId);
 			if (index !== -1) {
 				users.value.splice(index, 1, { ...users.value[index], ...userData });
 			}
+			users.value.sort((a, b) => a.name.localeCompare(b.name));
 		} catch (error) {
 			const errorOut = `Error updating user: ${error.message}`;
 			console.error(errorOut);
 			throw new Error(errorOut);
 		}
-	}
+	};
 
-	async function deleteUser(userId) {
+	const deleteUser = async (userId) => {
 		try {
-			const deleteUserFn = httpsCallable(cloudFunctions, 'deleteUser');
-            await deleteUserFn({ userId: userId });
-			users.value = users.value.filter(user => user.userId !== userId);
+			const deleteUserFn = httpsCallable(cloudFunctions, "deleteUser");
+			await deleteUserFn({ userId: userId });
+			users.value = users.value.filter((user) => user.userId !== userId);
 		} catch (error) {
 			const errorOut = `Error deleting user: ${error.message}`;
 			console.error(errorOut);
 			throw new Error(errorOut);
 		}
-	}
+	};
 
-	async function userByEmail(email) {
-		if (!email) { return null; }
+	const userByEmail = async (email) => {
+		if (!email) {
+			return null;
+		}
 		try {
-			const userQuery = query(collection(db, '/users/'),where("email", "==", email));
+			const userQuery = query(collection(db, "/users/"), where("email", "==", email));
 			const querySnapshot = await getDocs(userQuery);
 			if (!querySnapshot.empty) {
 				const userDoc = querySnapshot.docs[0];
@@ -111,7 +117,7 @@ export const useUsersStore = defineStore('users', () => {
 				const role = await _getUserRole(userData.email);
 				return {
 					...userData,
-					role
+					role,
 				};
 			}
 			return null;
@@ -120,41 +126,43 @@ export const useUsersStore = defineStore('users', () => {
 			console.error(errorOut);
 			throw new Error(errorOut);
 		}
-	}
+	};
 
-	async function userById(userId) {
-		if (!userId) { return null; }
+	const userById = async (userId) => {
+		if (!userId) {
+			return null;
+		}
 		if (!hasUsers.value) {
 			await loadUsers();
 		}
 		try {
-			const user = users.value.find(user => user.userId === userId);
+			const user = users.value.find((user) => user.userId === userId);
 			return user ? { ...user } : undefined;
 		} catch (error) {
 			const errorOut = `Error fetching user by ID from store: ${error.message}`;
 			console.error(errorOut);
 			throw new Error(errorOut);
 		}
-	}
+	};
 
-    return {
-        // State
+	return {
+		// State
 		users,
 		activeUser,
 
-        // Reset
-        $reset,
+		// Reset
+		$reset,
 
-        // Getters
+		// Getters
 		hasUsers,
-		UsersCount,
+		usersCount,
 
-        // Actions
+		// Actions
 		loadUsers,
 		createUser,
 		updateUser,
 		deleteUser,
 		userByEmail,
 		userById,
-    };
+	};
 });

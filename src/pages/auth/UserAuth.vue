@@ -1,150 +1,61 @@
 <template>
-	<main>
-		<base-dialog @close="clearError" :show="!!error" title="An error is ocurred!">
-			<p>{{ error }}</p>
-		</base-dialog>
-		<base-dialog :show="isLoading" fixed title="Authenticating...">
-			<base-spinner></base-spinner>
-		</base-dialog>
-		<base-card>
-			<form @submit.prevent="submitForm">
-				<div class="form-control" :class="{ invalid: !email.isValid }">
-					<label for="email">E-Mail</label>
-					<input type="email" id="email" autocomplete="username" v-model.trim="email.val" @blur="clearValidity('email')" />
-				</div>
-				<div class="form-control" :class="{ invalid: !password.isValid }">
-					<label for="password">Password</label>
-					<input type="password" id="password" autocomplete="current-password" v-model.trim="password.val"
-						@blur="clearValidity('password')" />
-				</div>
-				<p v-if="!formIsValid" class="invalid">Please fix errors, password min. 6 characters</p>
-				<base-button submit>Login</base-button>
-			</form>
-		</base-card>
-	</main>
+	<q-page class="q-pa-md bg-grey-2">
+		<Container>
+			<q-card class="q-pa-xl shadow-2">
+				<q-form @submit.prevent="submitForm" ref="formRef">
+					<q-card-section class="text-center q-mb-md">
+						<div class="text-h5 text-primary q-mb-sm">Login</div>
+					</q-card-section>
+					<q-card-section>
+						<q-input outlined type="email" label="Email" v-model="email" stack-label class="q-mb-md" autocomplete="username" :rules="emailRules" lazy-rules />
+						<q-input outlined type="password" label="Password" v-model="password" stack-label class="q-mb-md" autocomplete="current-password" :rules="passwordRules" lazy-rules />
+					</q-card-section>
+					<q-card-actions>
+						<q-btn color="primary" type="submit" class="full-width" label="Login" />
+					</q-card-actions>
+				</q-form>
+			</q-card>
+		</Container>
+	</q-page>
 </template>
 
-<script>
-import { ref } from 'vue';
-import { useAuthStore } from '@/stores/auth';
-import { useRouter } from 'vue-router';
-import { useError } from '@/composables/useError';
+<script setup>
+import { ref } from "vue";
+import { useAuthStore } from "@/stores/auth";
+import { useRouter } from "vue-router";
+import { useQuasar } from "quasar";
+import { emailRules, passwordRules } from "@/composables/useFormValidationRules";
 
-export default {
-	name: 'UserAuth',
-	setup() {
-		const componentName = 'UserAuth';
-		const authStore = useAuthStore();
-		const router = useRouter();
-		const { error, setError, clearError } = useError(componentName);
+const authStore = useAuthStore();
+const router = useRouter();
+const $q = useQuasar();
+const formRef = ref(null);
+const email = ref("");
+const password = ref("");
 
-		const email = ref({ val: '', isValid: true });
-		const password = ref({ val: '', isValid: true });
-		const formIsValid = ref(true);
-		const isLoading = ref(false);
-
-		function clearValidity(input) {
-			if (input === 'email') {
-				email.value.isValid = true;
-			}
-			if (input === 'password') {
-				password.value.isValid = true;
-			}
-		}
-
-		function validateForm() {
-			formIsValid.value = true;
-			if (email.value.val === '' || !email.value.val.includes('@')) {
-				email.value.isValid = false;
-				formIsValid.value = false;
-			}
-			if (password.value.val === '' || password.value.val.length < 6) {
-				password.value.isValid = false;
-				formIsValid.value = false;
-			}
-		}
-
-		async function submitForm() {
-			validateForm();
-			if (!formIsValid.value) {
-				return;
-			}
-
-			isLoading.value = true;
-
-			const userData = {
-				email: email.value.val,
-				password: password.value.val
-			};
-
-			try {
-				await authStore.login(userData);
-				router.replace('/');
-			} catch (err) {
-				setError(err.message || err);
-				password.value.val = '';
-			}
-			isLoading.value = false;
-		}
-
-		return {
-			componentName,
-			error,
-			clearError,
-			email,
-			password,
-			formIsValid,
-			isLoading,
-			submitForm,
-			clearValidity
-		};
+const submitForm = async () => {
+	const ok = await formRef.value.validate();
+	if (!ok) {
+		$q.dialog({
+			title: "Error",
+			message: "Form is not valid",
+		});
+		return;
 	}
+
+	const userData = {
+		email: email.value,
+		password: password.value,
+	};
+
+	$q.loading.show();
+	try {
+		await authStore.login(userData);
+		router.replace("/");
+	} catch (err) {
+		$q.dialog({ title: "Error", message: err.message || err });
+		password.value = "";
+	}
+	$q.loading.hide();
 };
 </script>
-
-<style scoped>
-	form {
-		margin: 1rem;
-		padding: 1rem;
-	}
-
-	.form-control {
-		margin: 0.5rem 0;
-	}
-
-	label {
-		font-weight: bold;
-		margin-bottom: 0.5rem;
-		display: block;
-	}
-
-	input,
-	textarea {
-		display: block;
-		width: 100%;
-		font: inherit;
-		border: 1px solid #ccc;
-		padding: 0.15rem;
-	}
-
-	input:focus,
-	textarea:focus {
-		border-color: #3d008d;
-		background-color: #faf6ff;
-		outline: none;
-	}
-
-	.invalid label {
-		color: red;
-	}
-
-	.invalid input,
-	.invalid textarea {
-		border: 1px solid red;
-	}
-
-	.invalid,
-	p {
-		color: red;
-	}
-</style>
