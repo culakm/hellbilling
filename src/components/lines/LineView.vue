@@ -1,5 +1,11 @@
 <template>
 	<div class="roadbook-item" :class="{ passed: line.passed === true && passFunctionality === false }" @click="passedLineLocal()">
+		<div class="roadbook-item-latlng">
+			<div class="lat-label">Lat</div>
+			<div class="lat-value">{{ decimalToDMS(line.lat) }}</div>
+			<div class="lng-label">Lng</div>
+			<div class="lng-value">{{ decimalToDMS(line.lng, false) }}</div>
+		</div>
 		<div class="roadbook-item-place">
 			<div class="order">{{ line.order }}</div>
 			<div class="point">
@@ -58,6 +64,7 @@ import { useTripsStore } from "@/stores/trips";
 import { useLinesStore } from "@/stores/lines";
 import { useRoute } from "vue-router";
 import { useQuasar } from "quasar";
+import { decimalToDMS, DMSToDecimal } from "@/utils";
 
 const props = defineProps({
 	line: {
@@ -66,6 +73,13 @@ const props = defineProps({
 		default: () => ({}),
 	},
 });
+
+// const lat = 18.035144142314884;
+// console.log("Decimal START!!!!!!!!!!!!!:", lat);
+// const dms = decimalToDMS(lat);
+// console.log("DMS!!!!!!!!!!!!!:", dms);
+// const decimal = DMSToDecimal(dms);
+// console.log("Decimal!!!!!!!!!!!!!:", decimal);
 
 const tripsStore = useTripsStore();
 const linesStore = useLinesStore();
@@ -105,6 +119,7 @@ const line = toRef(props, "line");
 .roadbook-item {
 	display: grid;
 	grid-template-areas:
+		"latlng"
 		"place"
 		"road";
 	border: 2px solid #111;
@@ -112,6 +127,16 @@ const line = toRef(props, "line");
 	margin: 0;
 	width: 100%;
 	page-break-inside: avoid;
+}
+
+.roadbook-item-latlng {
+	height: 2.5rem;
+	grid-area: latlng;
+	border: #000 1px solid;
+	display: flex;
+	flex-wrap: nowrap;
+	justify-content: space-between;
+	align-items: stretch;
 }
 
 .roadbook-item-place {
