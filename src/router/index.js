@@ -1,11 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router';
-// import store from '@/store/index.js';
 import { useAuthStore } from '@/stores/auth';
 import routes from './routes';
 
 const router = createRouter({
 	history: createWebHistory(),
-	routes
+	routes,
 });
 
 router.beforeEach((to, _, next) => {

@@ -1,16 +1,18 @@
 <template>
-	<div class="roadbook-item" :class="{ passed: line.passed === true && passFunctionality === false }" @click="passedLineLocal()">
-		<div class="roadbook-item-latlng">
-			<div class="lat-label">Lat</div>
-			<div class="lat-value">{{ decimalToDMS(line.lat) }}</div>
-			<div class="lng-label">Lng</div>
-			<div class="lng-value">{{ decimalToDMS(line.lng, false) }}</div>
-		</div>
+	<div
+		class="roadbook-item"
+		:class="{ passed: line.passed === true && passFunctionality === false }"
+		@click="passedLineLocal()"
+	>
 		<div class="roadbook-item-place">
 			<div class="order">{{ line.order }}</div>
 			<div class="point">
 				<div class="point-grid">
-					<div class="name" v-html="line.name"></div>
+					<div class="place-label">
+						<div class="name">{{ line.name }}</div>
+						<div class="lat">{{ decimalToDMS(line.lat) }}</div>
+						<div class="lng">{{ decimalToDMS(line.lng, false) }}</div>
+					</div>
 					<div class="tags">
 						<div v-if="line.stop" class="stop">
 							<div class="svgicon" :class="{ 'color-stop': !isTripViewPrint }">
@@ -18,13 +20,25 @@
 							</div>
 						</div>
 						<div class="interest">
-							<div v-if="line.culture" class="svgicon" :class="{ 'color-culture': !isTripViewPrint }">
+							<div
+								v-if="line.culture"
+								class="svgicon"
+								:class="{ 'color-culture': !isTripViewPrint }"
+							>
 								<img src="/img/interest_c_transparent.svg" alt="culture" />
 							</div>
-							<div v-if="line.history" class="svgicon" :class="{ 'color-history': !isTripViewPrint }">
+							<div
+								v-if="line.history"
+								class="svgicon"
+								:class="{ 'color-history': !isTripViewPrint }"
+							>
 								<img src="/img/interest_h_transparent.svg" alt="history" />
 							</div>
-							<div v-if="line.sport" class="svgicon" :class="{ 'color-sport': !isTripViewPrint }">
+							<div
+								v-if="line.sport"
+								class="svgicon"
+								:class="{ 'color-sport': !isTripViewPrint }"
+							>
 								<img src="/img/interest_s_transparent.svg" alt="sport" />
 							</div>
 						</div>
@@ -33,67 +47,86 @@
 			</div>
 			<div class="map-page">
 				<div class="map-page-label">Map Page</div>
-				<div class="map-page-value">{{ line.mapPage }}</div>
+				<div class="map-page-value">{{ displayMapPage }}</div>
 			</div>
 			<div class="distance">
 				<div class="km-total">
-					{{ typeof line.kmTotal === "number" && line.kmTotal >= 0 ? line.kmTotal + " Km" : "--" }}
+					{{
+						typeof line.kmTotal === 'number' && line.kmTotal >= 0
+							? line.kmTotal + ' Km'
+							: '--'
+					}}
 				</div>
 				<div class="km-start-end">
-					{{ line.order === 1 ? "DSS" : line.order === tripsStore.activeTrip.linesCount ? "ASS" : "" }}
+					{{
+						line.order === 1
+							? 'DSS'
+							: line.order === tripsStore.activeTrip.linesCount
+								? 'ASS'
+								: ''
+					}}
 				</div>
-				<div class="km-part">{{ line.kmPart > 0 ? line.kmPart + " Km" : "--" }}</div>
+				<div class="km-part">
+					{{ line.kmPart > 0 ? line.kmPart + ' Km' : '--' }}
+				</div>
 			</div>
 		</div>
 		<div class="roadbook-item-road">
-			<div class="tulip" :class="{ 'show-before': line.close, 'color-tulip': !isTripViewPrint }">
-				<img class="tulip-img" v-if="line.tulip" :src="tulipSrc(line.tulip)" alt="tulip" />
+			<div
+				class="tulip"
+				:class="{ 'show-before': line.close, 'color-tulip': !isTripViewPrint }"
+			>
+				<img
+					v-if="line.tulip"
+					class="tulip-img"
+					:src="tulipSrc(line.tulip)"
+					alt="tulip"
+				/>
 			</div>
 			<div class="road-no">
 				<div class="road-no-label">Road No.</div>
 				<div class="road-no-value">{{ line.roadNo }}</div>
 			</div>
-			<div class="note" v-html="line.note"></div>
+			<!-- eslint-disable-next-line vue/no-v-html -- sanitized via DOMPurify -->
+			<div class="note" v-html="sanitizedNote"></div>
 		</div>
 	</div>
 </template>
 
 <script setup>
-import { toRef, computed, onMounted } from "vue";
-import { useTripsStore } from "@/stores/trips";
-import { useLinesStore } from "@/stores/lines";
-import { useRoute } from "vue-router";
-import { useQuasar } from "quasar";
-import { decimalToDMS, DMSToDecimal } from "@/utils";
+import { toRef, computed } from 'vue';
+import { useTripsStore } from '@/stores/trips';
+import { useLinesStore } from '@/stores/lines';
+import { useRoute } from 'vue-router';
+import { useQuasar } from 'quasar';
+import { decimalToDMS } from '@/utils';
+import { sanitizeRichText } from '@/composables/useSanitize';
 
 const props = defineProps({
 	line: {
 		type: Object,
-		required: true,
 		default: () => ({}),
 	},
 });
-
-// const lat = 18.035144142314884;
-// console.log("Decimal START!!!!!!!!!!!!!:", lat);
-// const dms = decimalToDMS(lat);
-// console.log("DMS!!!!!!!!!!!!!:", dms);
-// const decimal = DMSToDecimal(dms);
-// console.log("Decimal!!!!!!!!!!!!!:", decimal);
 
 const tripsStore = useTripsStore();
 const linesStore = useLinesStore();
 const route = useRoute();
 const $q = useQuasar();
 
-const isTripViewPrint = computed(() => route.path.includes("trip/view/print"));
-const isTripView = computed(() => route.path.includes("trip/view"));
-const passFunctionality = computed(() => isTripViewPrint.value || route.path.includes("trip/edit"));
+const isTripViewPrint = computed(() => route.path.includes('trip/view/print'));
+const isTripView = computed(() => route.path.includes('trip/view'));
+const passFunctionality = computed(
+	() => isTripViewPrint.value || route.path.includes('trip/edit')
+);
 
-onMounted(() => {
+const sanitizedNote = computed(() => sanitizeRichText(props.line.note));
+
+const displayMapPage = computed(() => {
 	if (props.line.mapPage && isTripView.value) {
-		props.line.mapPage = props.line.mapPage.replace(/,/g, " ");
+		return props.line.mapPage.replace(/,/g, ' ');
 	}
+	return props.line.mapPage;
 });
 
 const passedLineLocal = async () => {
@@ -102,26 +135,24 @@ const passedLineLocal = async () => {
 	const passed = !props.line.passed;
 	try {
 		await linesStore.passedLine(props.line.lineId, passed);
-		props.line.passed = passed;
 		$q.loading.hide();
 	} catch (err) {
-		$q.dialog({ title: "Error", message: err.message || err });
+		$q.dialog({ title: 'Error', message: err.message || err });
 		$q.loading.hide();
 	}
 };
 
 const tulipSrc = (tulip) => `/img/${tulip}.svg`;
 
-const line = toRef(props, "line");
+const line = toRef(props, 'line');
 </script>
 
 <style scoped>
 .roadbook-item {
 	display: grid;
 	grid-template-areas:
-		"latlng"
-		"place"
-		"road";
+		'place'
+		'road';
 	border: 2px solid #111;
 	padding: 0;
 	margin: 0;
@@ -129,20 +160,9 @@ const line = toRef(props, "line");
 	page-break-inside: avoid;
 }
 
-.roadbook-item-latlng {
-	height: 2.5rem;
-	grid-area: latlng;
-	border: #000 1px solid;
-	display: flex;
-	flex-wrap: nowrap;
-	justify-content: space-between;
-	align-items: stretch;
-}
-
 .roadbook-item-place {
 	height: 4rem;
 	grid-area: place;
-	border: #000 1px solid;
 	display: flex;
 	flex-wrap: nowrap;
 	justify-content: space-between;
@@ -150,7 +170,7 @@ const line = toRef(props, "line");
 }
 
 .roadbook-item-place > div {
-	border: #000 1px solid;
+	border-right: 1px solid #111;
 	height: 100%;
 	display: flex;
 	align-items: center;
@@ -158,8 +178,11 @@ const line = toRef(props, "line");
 	font-weight: bold;
 }
 
+.roadbook-item-place > div:last-child {
+	border-right: none;
+}
+
 .roadbook-item-place > div.order {
-	/* flex-grow: 0; flex-shrink: 0; flex-basis: 5%; */
 	flex: 0 0 5%;
 }
 
@@ -172,15 +195,29 @@ const line = toRef(props, "line");
 	height: 100%;
 	display: grid;
 	grid-template-areas:
-		"name"
-		"tags";
+		'place-label'
+		'tags';
 }
 
-.roadbook-item-place > div.point .point-grid .name {
+.roadbook-item-place > div.point .point-grid .place-label {
+	width: stretch;
 	margin: 0 1rem;
-	grid-area: name;
-	justify-self: left;
+	grid-area: place-label;
 	align-self: center;
+	display: flex;
+	align-items: baseline;
+	gap: 0.5rem;
+	font-size: 1.1rem;
+}
+
+.roadbook-item-place > div.point .point-grid .place-label .name {
+	flex: 1;
+	text-align: left;
+}
+
+.roadbook-item-place > div.point .point-grid .place-label .lat,
+.roadbook-item-place > div.point .point-grid .place-label .lng {
+	white-space: nowrap;
 }
 
 .roadbook-item-place > div.point .point-grid .tags {
@@ -189,16 +226,14 @@ const line = toRef(props, "line");
 	justify-self: left;
 	align-self: center;
 	display: flex;
-}
-
-.roadbook-item-place > div.point .point-grid .tags .stop {
-	margin-right: 1rem;
+	align-items: center;
+	gap: 0.6rem;
 }
 
 .roadbook-item-place > div.point .point-grid .tags .interest {
 	display: flex;
-	justify-content: space-between;
-	gap: 0.5rem;
+	align-items: center;
+	gap: 0.6rem;
 }
 
 .roadbook-item-place > div.distance {
@@ -216,8 +251,8 @@ const line = toRef(props, "line");
 	bottom: 0;
 	width: 50%;
 	height: 33%;
-	border-left: 1px solid #000;
-	border-top: 1px solid #000;
+	border-left: 1px solid #111;
+	border-top: 1px solid #111;
 	box-sizing: border-box;
 	display: flex;
 	justify-content: center;
@@ -237,37 +272,41 @@ const line = toRef(props, "line");
 }
 
 .svgicon {
-	width: 1.5rem;
+	width: 1.8rem;
+	height: 1.8rem;
+	padding: 0.15rem;
 	display: flex;
 	justify-content: center;
 	align-items: center;
 	border-radius: 50%;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+	box-sizing: border-box;
 }
 
 .svgicon img {
-	max-height: 1.5rem;
+	max-height: 1.4rem;
 }
 
 .color-culture {
-	background-color: yellow;
+	background-color: #f5c518;
 }
 
 .color-history {
-	background-color: brown;
+	background-color: #8b5e3c;
 }
 
 .color-sport {
-	background-color: blue;
+	background-color: #2979ff;
 }
 
 .color-stop {
-	background-color: red;
+	background-color: #e53935;
 }
 
 .roadbook-item-road {
-	height: 4rem;
+	min-height: 4rem;
 	grid-area: road;
-	border: #000 1px solid;
+	border-top: 1px solid #111;
 	display: flex;
 	flex-wrap: nowrap;
 	justify-content: space-between;
@@ -275,12 +314,15 @@ const line = toRef(props, "line");
 }
 
 .roadbook-item-road > div {
-	border: #000 1px solid;
-	height: 100%;
+	border-right: 1px solid #111;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	font-weight: bold;
+}
+
+.roadbook-item-road > div:last-child {
+	border-right: none;
 }
 
 .roadbook-item-road > div.tulip {
@@ -289,7 +331,7 @@ const line = toRef(props, "line");
 }
 
 .tulip.show-before::before {
-	content: "!";
+	content: '!';
 	position: absolute;
 	left: 1.5rem;
 	top: 50%;
@@ -311,21 +353,25 @@ const line = toRef(props, "line");
 .roadbook-item-road > div.road-no {
 	flex: 0 0 15%;
 	position: relative;
-	display: flex;
 	flex-direction: column;
+	align-items: flex-start;
 }
 
 .roadbook-item-road > div.road-no .road-no-label {
-	flex: 0 0 25%;
-	align-self: flex-start;
+	width: 100%;
+	padding: 0.1rem 0.3rem;
 	font-weight: normal;
+	font-size: 0.65rem;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	color: #666;
 }
 
 .roadbook-item-road > div.road-no .road-no-value {
 	flex: 1;
-	align-self: flex-start;
-	margin: 0.1rem 0.3rem;
+	padding: 0.2rem 0.3rem;
 	max-width: 11rem;
+	font-size: 0.85rem;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 	white-space: break-spaces;
@@ -334,31 +380,35 @@ const line = toRef(props, "line");
 
 .roadbook-item-road > div.note {
 	flex: 0 0 70%;
+	display: block;
 	padding: 0.2rem 0.3rem;
 	font-weight: normal;
-	justify-content: left;
-	align-items: flex-start;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
 }
 
 .roadbook-item-place > div.map-page {
 	flex: 0 0 15%;
 	position: relative;
-	display: flex;
 	flex-direction: column;
-	/* Set flex container with column layout */
+	align-items: flex-start;
 }
 
 .roadbook-item-place > div.map-page .map-page-label {
-	flex: 0 0 25%;
-	align-self: flex-start;
+	width: 100%;
+	padding: 0.1rem 0.3rem;
 	font-weight: normal;
+	font-size: 0.65rem;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	color: #666;
 }
 
 .roadbook-item-place > div.map-page .map-page-value {
 	flex: 1;
-	align-self: flex-start;
-	margin: 0.1rem 0.3rem;
+	padding: 0.2rem 0.3rem;
 	max-width: 9rem;
+	font-size: 0.85rem;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 	white-space: break-spaces;

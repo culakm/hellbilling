@@ -1,8 +1,8 @@
-import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
-import vueDevTools from "vite-plugin-vue-devtools";
-import { quasar, transformAssetUrls } from "@quasar/vite-plugin";
-import { fileURLToPath, URL } from "node:url";
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import vueDevTools from 'vite-plugin-vue-devtools';
+import { quasar, transformAssetUrls } from '@quasar/vite-plugin';
+import { fileURLToPath, URL } from 'node:url';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -12,16 +12,15 @@ export default defineConfig({
 		}),
 		vueDevTools(),
 		quasar({
-			// sassVariables: fileURLToPath(new URL('./src/quasar-variables.sass', import.meta.url))
-			sassVariables: "@/css/quasar-variables.sass",
+			sassVariables: '@/css/quasar-variables.sass',
 		}),
 	],
 	server: {
-		port: 5173, // http://localhost:5173 - default port
+		port: 5173,
 	},
 	resolve: {
 		alias: {
-			"@": fileURLToPath(new URL("./src", import.meta.url)),
+			'@': fileURLToPath(new URL('./src', import.meta.url)),
 		},
 	},
 });

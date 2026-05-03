@@ -1,20 +1,33 @@
-import { ref, computed } from "vue";
-import { defineStore } from "pinia";
-import { db } from "../firebase.js";
-import { interestNames, closeLineThresholdKm } from "@/config/settings";
-import { collection, doc, getDocs, updateDoc, setDoc, deleteDoc, query, orderBy, writeBatch } from "firebase/firestore";
+import { ref, computed } from 'vue';
+import { defineStore } from 'pinia';
+import { db } from '../firebase.js';
+import { interestNames, closeLineThresholdKm } from '@/config/settings';
+import {
+	collection,
+	doc,
+	getDocs,
+	updateDoc,
+	setDoc,
+	deleteDoc,
+	query,
+	orderBy,
+	writeBatch,
+} from 'firebase/firestore';
 
-export const useLinesStore = defineStore("lines", () => {
+export const useLinesStore = defineStore('lines', () => {
 	// State
 	const lines = ref([]);
 	const tripId = ref(undefined);
 
 	const mapMarkers = computed(() => {
-		if (!lines) return [];
+		if (!lines.value.length) return [];
 		let allMarkers = [];
 		for (const line of lines.value) {
 			if (line.lat && line.lng) {
-				allMarkers.push({ position: { lat: line.lat, lng: line.lng }, title: line.name || `Line ${line.order}` });
+				allMarkers.push({
+					position: { lat: line.lat, lng: line.lng },
+					title: line.name || `Line ${line.order}`,
+				});
 			}
 		}
 		return allMarkers;
@@ -33,14 +46,14 @@ export const useLinesStore = defineStore("lines", () => {
 	const getNewLineId = async (localTripId) => {
 		try {
 			if (!localTripId) {
-				throw new Error("Trip ID is required to generate a new line ID.");
+				throw new Error('Trip ID is required to generate a new line ID.');
 			}
-			const newDocRef = doc(collection(db, "trips", localTripId, "lines"));
+			const newDocRef = doc(collection(db, 'trips', localTripId, 'lines'));
 			return newDocRef.id;
 		} catch (error) {
 			const errorOut = `Error generating new line ID for trip ID ${localTripId}: ${error.message}`;
 			console.error(errorOut);
-			throw new Error(errorOut);
+			throw new Error(errorOut, { cause: error });
 		}
 	};
 
@@ -53,9 +66,9 @@ export const useLinesStore = defineStore("lines", () => {
 
 	const loadLines = async (localTripId) => {
 		try {
-			const docRef = doc(db, "trips", localTripId);
-			const linesCollectionRef = collection(docRef, "lines");
-			const linesQuery = query(linesCollectionRef, orderBy("order"));
+			const docRef = doc(db, 'trips', localTripId);
+			const linesCollectionRef = collection(docRef, 'lines');
+			const linesQuery = query(linesCollectionRef, orderBy('order'));
 			const querySnapshot = await getDocs(linesQuery);
 
 			const loadedLines = querySnapshot.docs.map((docSnap) => ({
@@ -70,7 +83,7 @@ export const useLinesStore = defineStore("lines", () => {
 		} catch (error) {
 			const errorOut = `Error fetching lines for trip ID ${localTripId}: ${error.message}`;
 			console.error(errorOut);
-			throw new Error(errorOut);
+			throw new Error(errorOut, { cause: error });
 		}
 	};
 
@@ -87,7 +100,7 @@ export const useLinesStore = defineStore("lines", () => {
 		} catch (error) {
 			const errorOut = `Error updating lines: ${error.message}`;
 			console.error(errorOut);
-			throw new Error(errorOut);
+			throw new Error(errorOut, { cause: error });
 		}
 	};
 
@@ -104,7 +117,7 @@ export const useLinesStore = defineStore("lines", () => {
 		} catch (error) {
 			const errorOut = `Error deleting lines: ${error.message}`;
 			console.error(errorOut);
-			throw new Error(errorOut);
+			throw new Error(errorOut, { cause: error });
 		}
 	};
 
@@ -122,15 +135,20 @@ export const useLinesStore = defineStore("lines", () => {
 		} catch (error) {
 			const errorOut = `Error creating line: ${error.message}`;
 			console.error(errorOut);
-			throw new Error(errorOut);
+			throw new Error(errorOut, { cause: error });
 		}
 	};
 
 	const editLine = async (lineData) => {
 		try {
-			await setDoc(doc(db, `trips/${lineData.tripId}/lines/`, lineData.lineId), lineData);
+			await setDoc(
+				doc(db, `trips/${lineData.tripId}/lines/`, lineData.lineId),
+				lineData
+			);
 
-			const index = lines.value.findIndex((line) => line.lineId === lineData.lineId);
+			const index = lines.value.findIndex(
+				(line) => line.lineId === lineData.lineId
+			);
 
 			if (index !== -1) {
 				lines.value.splice(index, 1, { ...lines.value[index], ...lineData });
@@ -141,13 +159,13 @@ export const useLinesStore = defineStore("lines", () => {
 		} catch (error) {
 			const errorOut = `Error editing line: ${error.message}`;
 			console.error(errorOut);
-			throw new Error(errorOut);
+			throw new Error(errorOut, { cause: error });
 		}
 	};
 
 	const deleteLine = async (localTripId, localLineId) => {
 		try {
-			await deleteDoc(doc(db, "trips", localTripId, "lines", localLineId));
+			await deleteDoc(doc(db, 'trips', localTripId, 'lines', localLineId));
 			if (tripId.value === localTripId) {
 				lines.value = lines.value.filter((line) => line.lineId !== localLineId);
 				sortLines();
@@ -156,13 +174,13 @@ export const useLinesStore = defineStore("lines", () => {
 		} catch (error) {
 			const errorOut = `Error deleting line: ${error.message}`;
 			console.error(errorOut);
-			throw new Error(errorOut);
+			throw new Error(errorOut, { cause: error });
 		}
 	};
 
 	const passedLine = async (localLineId, localPassed) => {
 		try {
-			const lineRef = doc(db, "trips", tripId.value, "lines", localLineId);
+			const lineRef = doc(db, 'trips', tripId.value, 'lines', localLineId);
 			await updateDoc(lineRef, { passed: localPassed });
 
 			const line = lines.value.find((l) => l.lineId === localLineId);
@@ -170,7 +188,7 @@ export const useLinesStore = defineStore("lines", () => {
 		} catch (error) {
 			const errorOut = `Error updating passed line status: ${error.message}`;
 			console.error(errorOut);
-			throw new Error(errorOut);
+			throw new Error(errorOut, { cause: error });
 		}
 	};
 
@@ -208,7 +226,11 @@ export const useLinesStore = defineStore("lines", () => {
 			// close line calculation
 			line.close = false;
 			const nextLine = lines.value[index + 1];
-			if (index < lines.value.length - 1 && line.kmTotal !== null && nextLine?.kmTotal !== null) {
+			if (
+				index < lines.value.length - 1 &&
+				line.kmTotal !== null &&
+				nextLine?.kmTotal !== null
+			) {
 				if (nextLine.kmTotal - line.kmTotal < closeLineThresholdKm) {
 					line.close = true;
 				}
