@@ -15,8 +15,7 @@ HellBillingRB is a web app for creating and managing car journey roadbooks. User
 - **Firebase** backend: Auth, Firestore, Storage, Cloud Functions v2 (Node 24), App Check
 - **Vite 7** build tool, dev server on port 5175
 - **vue3-google-map** for Google Maps with Advanced Markers
-- **jsPDF + html2pdf.js** for PDF export with embedded Montserrat fonts
-- **pdfMake + html-to-pdfmake** as alternative PDF generation library (used in `usePdfExport` composable)
+- **pdfMake + html-to-pdfmake** for PDF export (used in `usePdfExport` composable)
 - **vue-draggable-plus** for line drag-and-drop reordering
 
 ## Commands
@@ -57,7 +56,7 @@ Roles (user/editor/admin) are stored as **custom claims** on Firebase Auth token
 
 ### Frontend Structure
 
-- `src/pages/` — route pages organized by domain (auth, trips, users, cards, test)
+- `src/pages/` — route pages organized by domain (auth, trips, users, test)
 - `src/components/` — reusable components by domain (trips, lines, users, maps, ui)
 - `src/stores/` — Pinia setup-style stores (auth, trips, lines, users)
 - `src/composables/` — shared logic (useError, useFirebaseStorage, useFormValidationRules, usePdfExport, useUtils)
@@ -83,5 +82,5 @@ Roles (user/editor/admin) are stored as **custom claims** on Firebase Auth token
 - Routes use `meta.requiresAuth` / `meta.requiresUnauth` enforced by navigation guards
 - Environment variables via `.env.local` accessed as `import.meta.env.VITE_*`
 - Google Maps uses separate API keys for production and localhost
-- 24-hour auto-logout with localStorage session persistence
+- Auth state is restored from Firebase via `onAuthStateChanged` in `src/stores/auth.js`; the router guard `await`s `authStore.authReady` before evaluating `meta.requiresAuth`, so page `onMounted` data loads can assume `auth.currentUser` is populated. `main.js` calls `useAuthStore()` between `app.use(pinia)` and `app.use(router)` to wire the listener before the first guard runs. 24-hour idle auto-logout still applies.
 - Rich-text HTML fields (e.g. `line.note`, authored via `mcQEditor`) must be rendered through `sanitizeRichText` from `@/composables/useSanitize` before `v-html` — DOMPurify-based allowlist sanitization is the only thing standing between stored HTML and the DOM
